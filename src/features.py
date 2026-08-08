@@ -131,22 +131,21 @@ def make_baseline(vectorizer=None, C=1.0, class_weight=None, seed=SEED):
         [("tfidf", vectorizer),
          ("clf",clf)])
 
-def evaluate(pipe, split):
-    """Scores a fitted pipeline on one split.
+def evaluate(y_true,y_pred):
+    """Scores one set of predictions against the true labels.
 
     Returns a dict with 'accuracy', 'macro_f1' and 'n'.
+
+    Takes two label arrays rather than a model and a split, so the same
+    function scores the TF-IDF pipeline, the embedding classifier and the
+    majority baseline. Those three produce predictions in completely different
+    ways, and none of that matters once the labels exist.
 
     Both scores are reported because they answer different questions. Accuracy
     is the share of articles predicted correctly. Macro-F1 averages the F1 of
     each class without caring about class size, so the 539 Kultur articles
     count as much as the 1678 Panorama ones.
-
-    On this data the two numbers land close together, which is a result in
-    itself: 3:1 imbalance is not enough for accuracy to be misleading here. At
-    90:10 it would be, and printing both is what makes that visible.
     """
-    y_true = split["label"]
-    y_pred = pipe.predict(split["text"])
 
     return {
         "accuracy": accuracy_score(y_true, y_pred),
@@ -166,16 +165,9 @@ def majority_baseline(train, val):
     "how much did the model actually learn".
     """
     dummy = DummyClassifier(strategy="most_frequent")
-    dummy.fit(X=train["text"],y=train["label"])
+    dummy.fit(X=train["text"], y=train["label"])
 
-    y_true = val["label"]
-    y_pred = dummy.predict(val["text"])
-
-    return {
-        "accuracy": accuracy_score(y_true,y_pred),
-        "macro_f1": f1_score(y_pred,y_true,average="macro"),
-        "n": len(y_true)
-    }
+    return evaluate(val["label"], dummy.predict(val["text"]))
 
 
 
@@ -195,7 +187,8 @@ def run_baseline(df=None, class_weight=None, C=1.0, seed=SEED, verbose=True):
     splits_dict = make_splits(df)
     pipe = make_baseline(C=C,class_weight=class_weight,seed=seed)
     pipe.fit(splits_dict["train"]["text"],splits_dict["train"]["label"])
-    metrics = evaluate(pipe=pipe,split=splits_dict["val"])
+    metrics = evaluate(splits_dict["val"]["label"],
+                       pipe.predict(splits_dict["val"]["text"]))
     majority = majority_baseline(splits_dict["train"],splits_dict["val"])
 
     if verbose:
