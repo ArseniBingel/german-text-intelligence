@@ -1,8 +1,6 @@
 """Generates synthetic German maintenance reports with known ground truth.
 
-Test data for extract.py. Each report stores the values used to build it, so the
-ground truth is exact. Three styles: labelled lines, inconsistent formatting,
-and prose without labels.
+Test data for extract.py. This generator was AI-generated.
 """
 import json
 import random
